@@ -11,13 +11,13 @@ For the full solution overview visit [Blinkist-Design-Challenge](https://drive.g
 
 **Architecture with Constraints**
 
-![Solution Component Diagram](readmeImages/SummaryDiagram.png)
+![Solution Component Diagram](readmeImages/ProposedSAContraints.png)
 
 &nbsp;
 
 **Target State Architecture**
 
-![Solution Component diagram](readmeImages/ArchDiagram.png)
+![Solution Component diagram](readmeImages/TargetArchitecture.png)
 
 &nbsp;
 

@@ -1,0 +1,23 @@
+---
+swagger: "2.0"
+info:
+  version: "2019-06-23T23:16:16Z"
+  title: "PredictBooks"
+host: "p1sb3lkiqg.execute-api.eu-central-1.amazonaws.com"
+basePath: "/dev"
+schemes:
+- "https"
+paths:
+  /book/recommendation:
+    post:
+      produces:
+      - "application/json"
+      responses:
+        200:
+          description: "200 response"
+          schema:
+            $ref: "#/definitions/Empty"
+definitions:
+  Empty:
+    type: "object"
+    title: "Empty Schema"

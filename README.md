@@ -103,7 +103,7 @@ aws s3 cp ./dist s3://$DEPLOY_BUCKET/blinkist-design-challenge/latest --recursiv
 
 > Currently, the solution can be deployed in all regions.
 
-## 08. License Summary
+## License Summary
 
 This sample code is made available under a GPL license. See the LICENSE file.
 

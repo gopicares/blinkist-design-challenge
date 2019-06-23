@@ -35,8 +35,9 @@ The Automated Content Recommendation and Personalization project consists of ser
 |-source/
   |-api/
   |-lambda/
-    |-access-validator/ [auxiliar module used to validate granular permissions]
-    |-helper/ [custom helper for CloudFormation deployment template]
+  |-kinesis/
+  |-glue/
+
 |-tests/ [folder containing unit testing scripts]
 </pre>
 

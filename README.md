@@ -1,11 +1,25 @@
 # blinkist-design-challenge
-Design Challenge from Blinkist.
+Design Challenge from Blinkist: Automated Content Recommendation and Personalization
 
-Many Amazon Web Services (AWS) customers require a data storage and analytics solution that offers more agility and flexibility than traditional data management systems. A data lake is an increasingly popular way to store and analyze data because it allows businesses to store all of their data, structured and unstructured, in a centralized repository. The AWS Cloud provides many of the building blocks required to help businesses implement a secure, flexible, and cost-effective data lake.
+Many comapnies require a data storage and analytics solution that offers more agility, flexibility at the same time natively integrates with machine learning toolsets to perform content discovery and personalization. A data fabric is an increasingly popular way to store, analyze data, create models and expose them as APIs to web servers or to 3rd party vendors. Data fabric also allows businesses to store all of their data, structured and unstructured, in a centralized repository and generate insights out of them. The AWS Cloud provides not only the building blocks required to help businesses implement a secure, flexible, and cost-effective data fabric but also provides recommendation/personalization engines as commodity services. For advanced customers, they provide platform to build, train, tune and continuosly deploy machine learning models.
 
-The data lake solution is an automated reference implementation that deploys a highly available, cost-effective data lake architecture on the AWS Cloud.  The solution is intended to address common customer pain points around conceptualizing data lake architectures, and automatically configures the core AWS services necessary to easily tag, search, share, and govern specific subsets of data across a business or with other external businesses. This solution allows users to catalog new datasets, and to create data profiles for existing datasets in Amazon Simple Storage Service (Amazon S3) and integrate with integrate with solutions like AWS Glue and Amazon Athena with minimal effort.
+The solution is an automated reference architecture implementation that deploys a highly available, cost-effective data fabric architecture on the AWS Cloud.  The solution is intended to address common pain points around conceptualizing end-end recommendation engine architectures. This solution ecommerce businesses to collect user engagement events along with user and item attributes through Amazon Kinesis, perform transformation through AWS Lambda, tag and store them in Amazon Simple Storage Service (Amazon S3), catalogue them in Glue Data Catalogue for ad-hoc querying using Redshift Spectrum/Athena. It also integrates with machine learning model development platform like Amazon Sagemake with minimal effort.
 
 For the full solution overview visit [Blinkist-Design-Challenge](https://drive.google.com/drive/folders/1mBc51EEA4Rnb7nE2pr6VWEMz3kWUfKDg?usp=sharing).
+
+## Architecture
+
+**Architecture with Constraints**
+
+![Solution Component Diagram](readmeImages/SummaryDiagram.png)
+
+&nbsp;
+
+**Target State Architecture**
+
+![Solution Component diagram](readmeImages/ArchDiagram.png)
+
+&nbsp;
 
 ## File Structure
 The Automated Content Recommendation and Personalization project consists of services that facilitate the functional areas of the solution. These services are deployed to a serverless environment or managed services often referred as PaaS on AWS.
@@ -80,3 +94,9 @@ aws s3 cp ./dist s3://$DEPLOY_BUCKET/blinkist-design-challenge/latest --recursiv
 * Using AWS CloudFormation, launch stack using the copied Amazon S3 link for the deploy.template.
 
 > Currently, the solution can be deployed in all regions.
+
+## 08. License Summary
+
+This sample code is made available under a GPL license. See the LICENSE file.
+
+&nbsp;

@@ -34,18 +34,20 @@ The Automated Content Recommendation and Personalization project consists of ser
 |-readmeImages/ [folder containing image files for readMe]
 |-source/
   |-api/
-  |-resource/
+  |-lambda/
     |-access-validator/ [auxiliar module used to validate granular permissions]
     |-helper/ [custom helper for CloudFormation deployment template]
+|-tests/ [folder containing unit testing scripts]
 </pre>
-Each service follows the structure of:
+
+Each microservice implementation follows the structure of:
 
 <pre>
 |-service-name/
   |-lib/
     |-[service module libraries and unit tests]
-  |-index.js/py [injection point for service]
-  |-package.json
+  |-service_name.py [injection point for service]
+  |-event.json
 </pre>
 
 ## Getting Started

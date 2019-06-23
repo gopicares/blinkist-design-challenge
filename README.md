@@ -30,6 +30,7 @@ The Automated Content Recommendation and Personalization project consists of ser
 
 <pre>
 |-deployment/ [folder containing templates and build scripts]
+|-presentation/ [folder containing the presentation material]
 |-readmeImages/ [folder containing image files for readMe]
 |-source/
   |-api/

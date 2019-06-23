@@ -9,7 +9,7 @@ The solution is intended to :
 1. Enable ecommerce businesses to collect user engagement events along with user and item attributes through Amazon Kinesis, perform transformation through AWS Lambda, tag and store them in Amazon Simple Storage Service (Amazon S3), catalogue them in Glue Data Catalogue for ad-hoc querying using Redshift Spectrum/Athena.
 2. Address common pain points around conceptualizing end-end recommendation engine architectures on Amazon Sagemaker Platform. 
 
-For the full solution overview visit ![Blinkist-Design-Challenge-Solution-Overview](presentation/Blinkist Design Challenge v1.0.pdf)
+For the full solution overview visit [blinkist-design-challenge/presentation](https://github.com/gopicares/blinkist-design-challenge/blob/master/presentation/Blinkist%20Design%20Challenge%20v1.0.pdf)
 
 ## Architecture
 

@@ -1,0 +1,450 @@
+AWSTemplateFormatVersion: 2010-09-09
+Parameters:
+  ProjectName:
+    Description: Name of the project (lowercase and under twelve characters)
+    Type: String
+    AllowedPattern: '^[a-z]{0,12}$'
+    ConstraintDescription: Must be lowercase and under twelve characters
+
+Mappings:
+  S3Buckets:
+    eu-central-1:
+      Bucket: apps.recommendation.dev.eu-central-1
+
+  Constants:
+    S3Keys:
+      GetUserCategoryCode: functions/GetUserCategory.zip
+      GetBookPredictorCode: functions/GetBookPredictor.zip
+
+Resources:
+  DynamoDbRole:
+    Type: 'AWS::IAM::Role'
+    Properties:
+      RoleName: !Sub '${ProjectName}-DynamoDbLambda'
+      AssumeRolePolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service:
+                - lambda.amazonaws.com
+            Action:
+              - 'sts:AssumeRole'
+              
+      ManagedPolicyArns:
+        - 'arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole'
+      Policies:
+        - PolicyName: PredictorPolicy
+          PolicyDocument:
+            Version: 2012-10-17
+            Statement:
+              - Effect: Allow
+                Action:
+                  - 'dynamodb:Query'
+                  - 'dynamodb:GetItem'
+                  - 'dynamodb:Scan'
+                Resource: !GetAtt UserAssignment.Arn
+              - Effect: Allow
+                Action:
+                  - 'sagemaker:InvokeEndpoint'
+                  - 'ssm:GetParameter'
+                Resource: '*'          
+
+  UserAssignment:
+    Type: 'AWS::DynamoDB::Table'
+    Properties:
+      TableName: !Ref ProjectName
+      AttributeDefinitions:
+        - AttributeName: username
+          AttributeType: S
+        - AttributeName: testname
+          AttributeType: S
+      KeySchema:
+        - AttributeName: username
+          KeyType: HASH
+        - AttributeName: testname
+          KeyType: RANGE
+      ProvisionedThroughput:
+        ReadCapacityUnits: 1
+        WriteCapacityUnits: 1
+
+  FunctionGetUserCategory:
+    Type: 'AWS::Lambda::Function'
+    Properties:
+      FunctionName: !Sub '${ProjectName}-GetUserCategory'
+      Description: Get if the user is categorized for AB Testing
+      Handler: GetUserCategory.handler
+      MemorySize: 128
+      Runtime: python3.6
+      Role: !GetAtt 
+        - DynamoDbRole
+        - Arn
+      Timeout: 300
+      Environment:
+        Variables:
+          TABLE_NAME: !Ref ProjectName
+      Code:
+        S3Bucket: !FindInMap 
+          - S3Buckets
+          - !Ref 'AWS::Region'
+          - Bucket
+        S3Key: !FindInMap 
+          - Constants
+          - S3Keys
+          - GetUserCategoryCode
+
+  FunctionGetUserCategoryPermissions:
+    Type: 'AWS::Lambda::Permission'
+    Properties:
+      Action: 'lambda:InvokeFunction'
+      FunctionName: !Ref FunctionGetUserCategory
+      Principal: apigateway.amazonaws.com
+      SourceArn: !Join 
+        - ''
+        - - 'arn:aws:execute-api:'
+          - !Ref 'AWS::Region'
+          - ':'
+          - !Ref 'AWS::AccountId'
+          - ':'
+          - !Ref PredictorApi
+          - /*
+
+  FunctionGetBookPredictor:
+    Type: 'AWS::Lambda::Function'
+    Properties:
+      FunctionName: !Sub '${ProjectName}-GetBookPredictor'
+      Description: Get recommendation from Sagemaker Endpoint
+      Handler: GetBookPredictor.handler
+      MemorySize: 128
+      Runtime: python3.6
+      Role: !GetAtt 
+        - DynamoDbRole
+        - Arn
+      Timeout: 300
+      Environment:
+        Variables:
+          TABLE_NAME: !Ref ProjectName
+      Code:
+        S3Bucket: !FindInMap 
+          - S3Buckets
+          - !Ref 'AWS::Region'
+          - Bucket
+        S3Key: !FindInMap 
+          - Constants
+          - S3Keys
+          - GetBookPredictorCode
+
+  FunctionGetBookPredictorPermissions:
+    Type: 'AWS::Lambda::Permission'
+    Properties:
+      Action: 'lambda:InvokeFunction'
+      FunctionName: !Ref FunctionGetBookPredictor
+      Principal: apigateway.amazonaws.com
+      SourceArn: !Join 
+        - ''
+        - - 'arn:aws:execute-api:'
+          - !Ref 'AWS::Region'
+          - ':'
+          - !Ref 'AWS::AccountId'
+          - ':'
+          - !Ref PredictorApi
+          - /*
+
+  PredictorApi:
+    Type: 'AWS::ApiGateway::RestApi'
+    Properties:
+      Name: !Ref ProjectName
+      Description: API Endpoints for Recommendation/Personalization Inferences
+      EndpointConfiguration:
+        Types: REGIONAL
+      FailOnWarnings: true
+
+  UserAttributeApiRequestGET:
+      Type: 'AWS::ApiGateway::Method'
+      Properties:
+        ResourceId: !Ref UsersApiResource
+        RestApiId: !Ref PredictorApi
+        AuthorizationType: None
+        HttpMethod: GET
+        Integration:
+          Type: MOCK
+          IntegrationResponses:
+            - ResponseTemplates:
+                application/json: "{\"message\": \"OK\"}"
+              SelectionPattern: '2\d{2}'
+              StatusCode: 200
+            - ResponseTemplates:
+                application/json: "{\"message\": \"Internal Server Error\"}"
+              SelectionPattern: '5\d{2}'
+              StatusCode: 500
+          PassthroughBehavior: WHEN_NO_MATCH
+          RequestTemplates:
+            application/json: '{"statusCode": 200}'
+        MethodResponses:
+          - ResponseModels:
+              application/json: Empty
+            ResponseParameters:
+              method.response.header.Access-Control-Allow-Headers: true
+              method.response.header.Access-Control-Allow-Methods: true
+              method.response.header.Access-Control-Allow-Origin: true
+            StatusCode: '200'  
+
+  UserAttributeApiRequestOPTIONS:
+    Type: 'AWS::ApiGateway::Method'
+    Properties:
+      ResourceId: !Ref UsersApiResource
+      RestApiId: !Ref PredictorApi
+      AuthorizationType: None
+      HttpMethod: OPTIONS
+      Integration:
+        Type: MOCK
+        IntegrationResponses:
+          - ResponseParameters:
+              method.response.header.Access-Control-Allow-Headers: >-
+                'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token'
+              method.response.header.Access-Control-Allow-Methods: '''GET'''
+              method.response.header.Access-Control-Allow-Origin: '''*'''
+            ResponseTemplates:
+              application/json: ''
+            StatusCode: '200'
+        PassthroughBehavior: WHEN_NO_MATCH
+        RequestTemplates:
+          application/json: '{"statusCode": 200}'
+      MethodResponses:
+        - ResponseModels:
+            application/json: Empty
+          ResponseParameters:
+            method.response.header.Access-Control-Allow-Headers: true
+            method.response.header.Access-Control-Allow-Methods: true
+            method.response.header.Access-Control-Allow-Origin: true
+          StatusCode: '200'
+
+  UserCategoryApiRequestGET:
+    Type: 'AWS::ApiGateway::Method'
+    Properties:
+      AuthorizationType: AWS_IAM
+      HttpMethod: GET
+      Integration:
+        Type: AWS_PROXY
+        IntegrationHttpMethod: POST
+        Uri: !Join 
+          - ''
+          - - 'arn:aws:apigateway:'
+            - !Ref 'AWS::Region'
+            - ':lambda:path/2015-03-31/functions/'
+            - !GetAtt 
+              - FunctionGetBookPredictor
+              - Arn
+            - /invocations
+        IntegrationResponses:
+          - StatusCode: 200   
+            ResponseTemplates:
+              application/json: $input.json('$.body')                   
+      RequestParameters:
+        method.request.path.name: true
+        method.request.querystring.test: true
+      ResourceId: !Ref UserCategoryApiResource
+      RestApiId: !Ref PredictorApi
+      MethodResponses:
+        - StatusCode: 200
+          ResponseModels:
+            application/json: Empty
+
+  UserCategoryApiRequestOPTIONS:
+    Type: 'AWS::ApiGateway::Method'
+    Properties:
+      ResourceId: !Ref UserCategoryApiResource
+      RestApiId: !Ref PredictorApi
+      AuthorizationType: None
+      HttpMethod: OPTIONS
+      Integration:
+        Type: MOCK
+        IntegrationResponses:
+          - ResponseParameters:
+              method.response.header.Access-Control-Allow-Headers: >-
+                'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token'
+              method.response.header.Access-Control-Allow-Methods: '''GET'''
+              method.response.header.Access-Control-Allow-Origin: '''*'''
+            ResponseTemplates:
+              application/json: ''
+            StatusCode: '200'
+        PassthroughBehavior: WHEN_NO_MATCH
+        RequestTemplates:
+          application/json: '{"statusCode": 200}'
+      MethodResponses:
+        - ResponseModels:
+            application/json: Empty
+          ResponseParameters:
+            method.response.header.Access-Control-Allow-Headers: true
+            method.response.header.Access-Control-Allow-Methods: true
+            method.response.header.Access-Control-Allow-Origin: true
+          StatusCode: '200'
+
+  BookAttributeApiRequestGET:
+      Type: 'AWS::ApiGateway::Method'
+      Properties:
+        ResourceId: !Ref BooksApiResource
+        RestApiId: !Ref PredictorApi
+        AuthorizationType: None
+        HttpMethod: GET
+        Integration:
+          Type: MOCK
+          IntegrationResponses:
+            - ResponseTemplates:
+                application/json: "{\"message\": \"OK\"}"
+              SelectionPattern: '2\d{2}'
+              StatusCode: 200
+            - ResponseTemplates:
+                application/json: "{\"message\": \"Internal Server Error\"}"
+              SelectionPattern: '5\d{2}'
+              StatusCode: 500
+          PassthroughBehavior: WHEN_NO_MATCH
+          RequestTemplates:
+            application/json: '{"statusCode": 200}'
+        MethodResponses:
+          - ResponseModels:
+              application/json: Empty
+            ResponseParameters:
+              method.response.header.Access-Control-Allow-Headers: true
+              method.response.header.Access-Control-Allow-Methods: true
+              method.response.header.Access-Control-Allow-Origin: true
+            StatusCode: '200'  
+
+  BookAttributeApiRequestOPTIONS:
+      Type: 'AWS::ApiGateway::Method'
+      Properties:
+        ResourceId: !Ref BooksApiResource
+        RestApiId: !Ref PredictorApi
+        AuthorizationType: None
+        HttpMethod: OPTIONS
+        Integration:
+          Type: MOCK
+          IntegrationResponses:
+            - ResponseParameters:
+                method.response.header.Access-Control-Allow-Headers: >-
+                  'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token'
+                method.response.header.Access-Control-Allow-Methods: '''GET'''
+                method.response.header.Access-Control-Allow-Origin: '''*'''
+              ResponseTemplates:
+                application/json: ''
+              StatusCode: '200'
+          PassthroughBehavior: WHEN_NO_MATCH
+          RequestTemplates:
+            application/json: '{"statusCode": 200}'
+        MethodResponses:
+          - ResponseModels:
+              application/json: Empty
+            ResponseParameters:
+              method.response.header.Access-Control-Allow-Headers: true
+              method.response.header.Access-Control-Allow-Methods: true
+              method.response.header.Access-Control-Allow-Origin: true
+            StatusCode: '200'  
+
+  BookPredictorApiRequestPOST:
+    Type: 'AWS::ApiGateway::Method'
+    Properties:
+      AuthorizationType: AWS_IAM
+      HttpMethod: POST
+      Integration:
+        Type: AWS_PROXY
+        IntegrationHttpMethod: POST
+        Uri: !Join 
+          - ''
+          - - 'arn:aws:apigateway:'
+            - !Ref 'AWS::Region'
+            - ':lambda:path/2015-03-31/functions/'
+            - !GetAtt 
+              - FunctionGetBookPredictor
+              - Arn
+            - /invocations
+        IntegrationResponses:
+          - StatusCode: 200   
+            ResponseTemplates:
+              application/json: $input.json('$.body')                   
+      ResourceId: !Ref BookPredictorApiResource
+      RestApiId: !Ref PredictorApi
+      MethodResponses:
+        - StatusCode: 200
+          ResponseModels:
+            application/json: Empty
+
+  BookPredictorApiRequestOPTIONS:
+      Type: 'AWS::ApiGateway::Method'
+      Properties:
+        ResourceId: !Ref BookPredictorApiResource
+        RestApiId: !Ref PredictorApi
+        AuthorizationType: None
+        HttpMethod: OPTIONS
+        Integration:
+          Type: MOCK
+          IntegrationResponses:
+            - ResponseParameters:
+                method.response.header.Access-Control-Allow-Headers: >-
+                  'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token'
+                method.response.header.Access-Control-Allow-Methods: '''GET'''
+                method.response.header.Access-Control-Allow-Origin: '''*'''
+              ResponseTemplates:
+                application/json: ''
+              StatusCode: '200'
+          PassthroughBehavior: WHEN_NO_MATCH
+          RequestTemplates:
+            application/json: '{"statusCode": 200}'
+        MethodResponses:
+          - ResponseModels:
+              application/json: Empty
+            ResponseParameters:
+              method.response.header.Access-Control-Allow-Headers: true
+              method.response.header.Access-Control-Allow-Methods: true
+              method.response.header.Access-Control-Allow-Origin: true
+            StatusCode: '200'  
+
+  UsersApiResource:
+    Type: 'AWS::ApiGateway::Resource'
+    Properties:
+      RestApiId: !Ref PredictorApi
+      ParentId: !GetAtt 
+        - PredictorApi
+        - RootResourceId
+      PathPart: user
+  UserCategoryApiResource:
+    Type: 'AWS::ApiGateway::Resource'
+    Properties:
+      RestApiId: !Ref PredictorApi
+      ParentId: !Ref UsersApiResource
+      PathPart: '{name}'      
+
+  BooksApiResource:
+    Type: 'AWS::ApiGateway::Resource'
+    Properties:
+      RestApiId: !Ref PredictorApi
+      ParentId: !GetAtt 
+        - PredictorApi
+        - RootResourceId
+      PathPart: book     
+  BookPredictorApiResource:
+    Type: 'AWS::ApiGateway::Resource'
+    Properties:
+      RestApiId: !Ref PredictorApi
+      ParentId: !Ref BooksApiResource
+      PathPart: recommendations      
+
+  APIDeployment:
+    DependsOn:
+      - UserCategoryApiRequestGET
+      - UserCategoryApiRequestOPTIONS
+    Type: 'AWS::ApiGateway::Deployment'
+    Properties:
+      Description: Dev deployment for API
+      RestApiId: !Ref PredictorApi
+      StageName: dev
+
+Outputs:
+  ApiUrl:
+    Description: URL of the RESTful API Endpoint
+    Value: !Join
+      - ''
+      - - https://
+        - !Ref PredictorApi
+        - '.execute-api.'
+        - !Ref 'AWS::Region'
+        - '.amazonaws.com/dev'

@@ -4,3 +4,5 @@ aws cloudformation --region eu-central-1 create-stack --stack-name test-sagemake
   --parameters file://test-sagemaker-params.json \
   --capabilities "CAPABILITY_IAM" \
   --disable-rollback
+
+# aws cloudformation delete-stack --stack-name SagemakerNotebook

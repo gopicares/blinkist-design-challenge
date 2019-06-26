@@ -30,25 +30,18 @@ The Automated Content Recommendation and Personalization project consists of ser
 
 <pre>
 |-deployment/ [folder containing templates and build scripts]
+  |-templates/
+  |-resources/
+  |-functions/
 |-presentation/ [folder containing the presentation material]
 |-readmeImages/ [folder containing image files for readMe]
 |-source/
   |-api/
   |-lambda/
-  |-kinesis/
+  |-kinesis_to_S3/
   |-glue/
 
 |-tests/ [folder containing unit testing scripts]
-</pre>
-
-Each microservice implementation follows the structure of:
-
-<pre>
-|-service-name/
-  |-lib/
-    |-[service module libraries and unit tests]
-  |-service_name.py [injection point for service]
-  |-event.json
 </pre>
 
 ## Getting Started
@@ -81,27 +74,36 @@ export DEPLOY_BUCKET=<source-bucket-base-name>
 
 #### 04. Run the unit tests:
 ```
-cd ./blinkist-design-challenge/deployment
+cd ./blinkist-design-challenge/tests
 chmod +x run-unit-tests.sh
 ./run-unit-tests.sh
 ```
 
 #### 05. Build the solution for deployment:
 ```
-chmod +x build-s3-dist.sh
-./build-s3-dist.sh $DEPLOY_BUCKET $VERSION_CODE
+* use aws cloudformation create package or sam package
 ```
 
 #### 06. Upload deployment assets to your Amazon S3 bucket:
 ```
-aws s3 cp ./dist s3://$DEPLOY_BUCKET/blinkist-design-challenge/latest --recursive --acl bucket-owner-full-control
+aws s3 cp ./functions/ s3://apps.recommendation.dev.eu-central-1/functions --exclude "*" --include "*.zip" --sse aws:kms --recursive
 ```
 
 #### 07. Deploy the solution:
-* From your designated Amazon S3 bucket where you uploaded the deployment assets, copy the link location for the deploy.template.
-* Using AWS CloudFormation, launch stack using the copied Amazon S3 link for the deploy.template.
+```
+cd ./blinkist-design-challenge/deployment/
+chmod +x deploy.sh
+./deploy.sh
+```
 
 > Currently, the solution can be deployed in all regions.
+
+#### 08. Deploy the solution:
+```
+cd ./blinkist-design-challenge/deployment/
+chmod +x cleanup.sh
+./cleanup.sh
+```
 
 ## License Summary
 

@@ -155,8 +155,6 @@ Resources:
     Properties:
       Name: !Ref ProjectName
       Description: API Endpoints for Recommendation/Personalization Inferences
-      EndpointConfiguration:
-        Types: REGIONAL
       FailOnWarnings: true
 
   UserAttributeApiRequestGET:
@@ -233,7 +231,7 @@ Resources:
             - !Ref 'AWS::Region'
             - ':lambda:path/2015-03-31/functions/'
             - !GetAtt 
-              - FunctionGetBookPredictor
+              - FunctionGetUserCategory
               - Arn
             - /invocations
         IntegrationResponses:

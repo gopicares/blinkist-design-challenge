@@ -405,7 +405,7 @@ Resources:
             - Ref: AWS::Region
             - :lambda:path/2015-03-31/functions/
             - Fn::GetAtt:
-              - FunctionGetBookPredictor
+              - FunctionGetUserCategory
               - Arn
             - /invocations
       MethodResponses:

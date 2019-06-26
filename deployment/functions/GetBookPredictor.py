@@ -1,41 +1,44 @@
 from __future__ import print_function # Python 2/3 compatibility
 import os
-import io
 import boto3
 import json
-import csv
 
 runtime= boto3.client('runtime.sagemaker')
 endpoint_param = boto3.client('ssm')
 
-    
 def handler(event, context):
     try:
         print("Received event: " + json.dumps(event, indent=2))
+        user = event["body"]["user"]
+        test = event["body"]["test"]
+        data = json.loads(json.dumps(event["body"]))
+        payload = data['data']
+        print(payload)
+        ## TODO get user category
+        ## meantime directly check and route
         
-        ssm_ep = endpoint_param.get_parameter(
-            Name='SM_PROD_ENDPOINT_NAME'
-        )
-        ENDPOINT_NAME = ssm_ep["Parameter"].get("Value")
-        print(ssm_ep["Parameter"].get("Value"))
-
-        payload = {"instances" : []}
-        # for sent in event["body"]:
-        #     payload["instances"].append({"data" : sent})    
-        # response = runtime.invoke_endpoint(EndpointName=ENDPOINT_NAME,
-        #                                    ContentType='application/json',
-        #                                    Body=json.dumps(payload))
-        # response = response["Body"].read().decode("utf-8")
-        # response = json.loads(response)
-        # print(response)
-        if ENDPOINT_NAME == 'ProdPredictor':
-            response = 'Recommendation from Production Instance'
+        
+        if test != "abtest":
+            ssm_ep = endpoint_param.get_parameter(
+                Name='SM_PROD_ENDPOINT_NAME'
+            )
+            ENDPOINT_NAME = ssm_ep["Parameter"].get("Value")
+            print(ssm_ep["Parameter"].get("Value"))
+            response = runtime.invoke_endpoint(EndpointName=ENDPOINT_NAME,
+                                            ContentType='text/csv',
+                                            Body=payload
+                                            )
+            print(response)
+            result = json.loads(response['Body'].read().decode())
+            print(result)
+            pred = int(result['predictions'][0]['score'])
+            predicted_label = 'M' if pred == 1 else 'B'
         else:
-            response = 'Recommendation from ABTesting Instance'        
+            predicted_label = 'ABTEST'
         return {
-            "statusCode": 200,
-            "body": response
-            }
+                "statusCode": 200,
+                "body": predicted_label
+                }
     except Exception as e:
         return {
             "statusCode": 500,

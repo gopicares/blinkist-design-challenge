@@ -1,0 +1,28 @@
+import json
+import logging
+import time
+import boto3
+from botocore.exceptions import ClientError
+
+def lambda_handler(event, context):
+    # TODO implement
+
+    # If the specified IAM role does not exist, it will be created
+    firehose_name = 'kinesis-fh-s3dev'
+
+    # Set up logging
+    print(event)
+
+    # Put records into the Firehose stream
+    firehose_client = boto3.client('firehose')
+    try:
+         firehose_client.put_record(DeliveryStreamName=firehose_name,Record={'Data': json.dumps(event)})
+    except ClientError as e:
+        logging.error(e)
+        exit(1)
+
+    return {
+        'statusCode': 200,
+        'body': json.dumps('Test event sent!')
+    }
+
